@@ -1,0 +1,18 @@
+﻿# Runtime/cache data
+data/
+target/
+__pycache__/
+*.py[cod]
+*.pyo
+*.log
+*.tmp
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Replay and generated parser files
+*.dem
+*.dem.bz2
+*.jsonl
