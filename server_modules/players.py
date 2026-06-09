@@ -5,6 +5,7 @@ PHP-фронтенд не умеет ходить в OpenDota напрямую (
 этот модуль вытягивает данные с api.opendota.com и кэширует на диск, чтобы
 последующие запросы не зависели от сети.
 """
+import concurrent.futures
 import json
 import threading
 import time
@@ -231,6 +232,40 @@ def get_player_totals(account_id):
         log(f"OpenDota totals error for {account_id}: {e}")
         return []
 
+
+
+def get_player_page_data(account_id, include_turbo=False):
+    """Aggregated profile payload for the PHP player page.
+
+    The frontend used to call profile, matches, wl and heroes as separate local
+    HTTP requests. This endpoint prepares the same data in one API request and
+    fetches independent OpenDota-backed resources concurrently on cold cache.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        future_profile = executor.submit(get_player_profile, account_id)
+        future_matches = executor.submit(get_player_matches, account_id, 100, 0, include_turbo)
+        future_wl = executor.submit(get_player_wl, account_id, include_turbo)
+        future_heroes = executor.submit(get_player_heroes, account_id, include_turbo)
+
+        profile = future_profile.result()
+        matches = future_matches.result()
+        try:
+            wl = future_wl.result()
+        except Exception as exc:
+            log(f"OpenDota wl page-data error for {account_id}: {exc}")
+            wl = {}
+        try:
+            heroes = future_heroes.result()
+        except Exception as exc:
+            log(f"OpenDota heroes page-data error for {account_id}: {exc}")
+            heroes = []
+
+    return {
+        "profile": profile,
+        "matches": matches if isinstance(matches, list) else [],
+        "wl": wl if isinstance(wl, dict) else {},
+        "heroes": heroes if isinstance(heroes, list) else [],
+    }
 
 def search_players(query):
     """Поиск игроков по нику. Без кэша — каждый запрос уникален."""

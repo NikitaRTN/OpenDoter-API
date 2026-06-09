@@ -9,6 +9,7 @@ from .matches import get_match_dir, get_match_metadata, parse_status, start_pars
 from .players import (
     get_player_heroes,
     get_player_matches,
+    get_player_page_data,
     get_player_profile,
     get_player_totals,
     get_player_wl,
@@ -149,6 +150,14 @@ class Handler(BaseHTTPRequestHandler):
                 account_id, tail = sub.split("/", 1)
                 if not account_id.isdigit():
                     self._send_error_json("account_id must be numeric", 400, "Bad request")
+                    return
+                if tail.startswith("page"):
+                    qs = urllib.parse.parse_qs(parsed.query)
+                    include_turbo = bool(qs.get("turbo") and str(qs["turbo"][0]).lower() in ("1", "true", "yes", "on"))
+                    try:
+                        self.send_json(get_player_page_data(account_id, include_turbo))
+                    except Exception as exc:
+                        self._send_error_json(str(exc), 502, "OpenDota error")
                     return
                 if tail.startswith("matches"):
                     limit = 20
