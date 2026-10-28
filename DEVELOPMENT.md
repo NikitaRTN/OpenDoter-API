@@ -40,3 +40,17 @@ Run the focused processor regression tests with Node.js:
 ```bash
 node --test tests/teamfightParticipation.test.mjs
 ```
+
+## Native damage-reduction counters
+
+The Java extractor now reads `m_vecDataTeam.<teamSlot>.m_flDamageByTypeReceivedPreReduction.<type>` and `...PostReduction.<type>` from the Radiant/Dire data entities at each interval. It preserves the three original fractional counters. Both the Node blob builder and direct Java blob builder select the latest complete snapshot for each player, convert each type counter to an integer before summing, and export `damage_received_pre_reduction`, `damage_received_post_reduction`, `damage_prevented`, `damage_reduction_pct`, source and snapshot time. Do not sum intervals or substitute combat-log damage/ending armor. Missing values stay unavailable; a zero denominator has a null percentage; amplification is not silently clamped.
+
+Rebuild the Java jar and restart the Java parser after pulling these changes. Already cached JSONL/blob files must be regenerated from the `.dem` to acquire the new counters; no replay re-download is needed. The client-reference fixture for match 9064491290 is 131612 / 58490 for Dragon Knight, yielding 55.6%, with no match-specific correction factor.
+
+```bash
+node --test tests/damageReduction.test.mjs tests/teamfightParticipation.test.mjs
+javac -proc:none -cp target/stats-0.1.0.jar -d target/test-classes tests/java/opendota/DamageReductionTest.java
+java -cp "target/test-classes:target/stats-0.1.0.jar" opendota.DamageReductionTest
+```
+
+Use `;` instead of `:` in the Java classpath on Windows.

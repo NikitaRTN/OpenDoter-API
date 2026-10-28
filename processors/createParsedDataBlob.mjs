@@ -8,6 +8,7 @@ import processExpand from './processExpand.mjs';
 import processDraftTimings from './processDraftTimings.mjs';
 import processPauses from './processPauses.mjs';
 import parseSchema from './parseSchema.mjs';
+import processDamageReduction from './processDamageReduction.mjs';
 
 function createParsedDataBlob(entries, matchId) {
   const logConsole = new Console(process.stderr);
@@ -35,6 +36,7 @@ function createParsedDataBlob(entries, matchId) {
   logConsole.timeEnd('processAllPlayers');
   parsedData.radiant_gold_adv = ap.radiant_gold_adv;
   parsedData.radiant_xp_adv = ap.radiant_xp_adv;
+  processDamageReduction(entries, parsedData.players);
   return parsedData;
 }
 const entries = [];

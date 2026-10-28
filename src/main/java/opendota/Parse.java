@@ -109,6 +109,19 @@ public class Parse {
     boolean doBlob = false;
     List<Entry> finalList = new ArrayList<Entry>();
 
+    private Double[] damageCounters(Entity team, int slot, String field) {
+        if (team == null || slot < 0) return null;
+        Double[] values = new Double[3];
+        for (int type = 0; type < 3; type++) {
+            Object value = getEntityProperty(team, "m_vecDataTeam.%i." + field + "." + String.format("%04d", type), slot);
+            if (!(value instanceof Number)) return null;
+            double number = ((Number) value).doubleValue();
+            if (!Double.isFinite(number) || number < 0) return null;
+            values[type] = number;
+        }
+        return values;
+    }
+
     public Parse(InputStream input, OutputStream output, boolean blob) throws IOException {
         greevilsGreedVisitor = new GreevilsGreedVisitor(name_to_slot);
         trackVisitor = new TrackVisitor();
@@ -663,6 +676,10 @@ public class Parse {
                     if (participation != null && participation != Float.POSITIVE_INFINITY) {
                         entry.teamfight_participation = participation;
                     }
+                    entry.damage_received_pre_reduction_by_type = damageCounters(dataTeam, teamSlot,
+                            "m_flDamageByTypeReceivedPreReduction");
+                    entry.damage_received_post_reduction_by_type = damageCounters(dataTeam, teamSlot,
+                            "m_flDamageByTypeReceivedPostReduction");
                     entry.level = getEntityProperty(pr, "m_vecPlayerTeamData.%i.m_iLevel", validIndices[i]);
                     entry.kills = getEntityProperty(pr, "m_vecPlayerTeamData.%i.m_iKills", validIndices[i]);
                     entry.deaths = getEntityProperty(pr, "m_vecPlayerTeamData.%i.m_iDeaths", validIndices[i]);

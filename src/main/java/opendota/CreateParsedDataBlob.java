@@ -32,6 +32,15 @@ class ParsedData {
 }
 
 class PlayerData {
+    public Double[] damage_received_pre_reduction_by_type;
+    public Double[] damage_received_post_reduction_by_type;
+    public Double damage_received_pre_reduction;
+    public Double damage_received_post_reduction;
+    public Double damage_prevented;
+    public Double damage_reduction_pct;
+    public String damage_reduction_source;
+    public Integer damage_reduction_time;
+
     public Integer player_slot = 0;
     public Integer obs_placed = 0;
     public Integer sen_placed = 0;
@@ -175,7 +184,34 @@ public class CreateParsedDataBlob {
         tEnd = System.currentTimeMillis();
         System.err.format("processAllPlayers: %sms\n", tEnd - tStart);
 
+        applyDamageReduction(entries, parsedData);
         return parsedData;
+    }
+
+    // Same latest-snapshot calculation as processors/processDamageReduction.mjs.
+    void applyDamageReduction(List<Entry> entries, ParsedData data) {
+        for (Entry e : entries) {
+            if (!"interval".equals(e.type) || e.slot == null || e.slot < 0 || e.slot >= data.players.size()
+                    || e.time == null || !validDamageCounters(e.damage_received_pre_reduction_by_type)
+                    || !validDamageCounters(e.damage_received_post_reduction_by_type)) continue;
+            PlayerData p = data.players.get(e.slot);
+            if (p.damage_reduction_time != null && p.damage_reduction_time > e.time) continue;
+            double pre = Arrays.stream(e.damage_received_pre_reduction_by_type).mapToDouble(v -> Math.floor(v)).sum();
+            double post = Arrays.stream(e.damage_received_post_reduction_by_type).mapToDouble(v -> Math.floor(v)).sum();
+            p.damage_received_pre_reduction_by_type = e.damage_received_pre_reduction_by_type;
+            p.damage_received_post_reduction_by_type = e.damage_received_post_reduction_by_type;
+            p.damage_received_pre_reduction = pre;
+            p.damage_received_post_reduction = post;
+            p.damage_prevented = pre - post;
+            p.damage_reduction_pct = pre > 0 ? 100 * (1 - post / pre) : null;
+            p.damage_reduction_source = "replay_team_damage_counters";
+            p.damage_reduction_time = e.time;
+        }
+    }
+
+    private boolean validDamageCounters(Double[] values) {
+        return values != null && values.length == 3
+                && Arrays.stream(values).allMatch(v -> v != null && Double.isFinite(v) && v >= 0);
     }
 
     private void greevilsGreed(Entry e, ParsedData container, Metadata meta) {

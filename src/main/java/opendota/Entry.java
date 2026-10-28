@@ -40,6 +40,9 @@ public class Entry implements Cloneable {
     public Float y;
     public Float z;
     public Float stuns;
+    // Native cumulative incoming hero-damage counters (physical / magical / pure).
+    public Double[] damage_received_pre_reduction_by_type;
+    public Double[] damage_received_post_reduction_by_type;
     public Integer hero_id;
     public Integer variant;
     public Integer facet_hero_id;
