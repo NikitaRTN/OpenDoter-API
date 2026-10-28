@@ -1,4 +1,3 @@
-import bz2
 import json
 import subprocess
 import threading
@@ -9,6 +8,7 @@ import urllib.request
 from .config import DATA_DIR, PARSER_PORT, ROOT
 from .constants import ensure_constants
 from .parser_process import ensure_parser
+from .replays import unpack_replay
 from .utils import download, log, read_json, write_json
 
 parse_locks = {}
@@ -159,7 +159,7 @@ def parse_match(match_id):
             download(replay_url, bz2_path)
         if not dem_path.exists():
             parse_status[match_id] = {"state": "running", "message": "Decompressing replay"}
-            dem_path.write_bytes(bz2.decompress(bz2_path.read_bytes()))
+            unpack_replay(bz2_path, dem_path)
         if not jsonl_path.exists():
             parse_status[match_id] = {"state": "running", "message": "Parsing replay"}
             post_dem_to_parser(dem_path, jsonl_path)

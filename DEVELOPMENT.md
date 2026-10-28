@@ -17,3 +17,15 @@ python -m unittest discover -s tests -v
 ```
 
 On Windows the API uses an exclusive listening socket. A second API instance fails with a clear startup error instead of silently sharing the port with an older instance. Restart the previous OpenDoter API process before running the updated version.
+
+## Replay compression
+
+Before parsing replays, install Python dependencies:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+Valve replay URLs may end with `.dem.bz2` even when their contents use Zstandard. The API detects BZip2, Zstandard and uncompressed demos from their signatures, not filenames. Decoding is incremental and the `.dem` is replaced atomically only after successful decompression and demo-header validation. Cached archives are reused; a format mismatch does not require downloading the replay again.
+
+A truncated archive, unknown response format or decoded non-demo produces a specific error and never replaces a previously valid `.dem`. Original archives remain available for diagnostics. Restart the API after updating its code or dependencies.
