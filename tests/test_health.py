@@ -5,12 +5,13 @@ import unittest
 import urllib.error
 import urllib.request
 from server_modules.handler import Handler
+from server_modules.app import APIHTTPServer
 
 
 class HealthTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        cls.server = APIHTTPServer(("127.0.0.1", 0), Handler)
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.base = "http://127.0.0.1:%s" % cls.server.server_port
@@ -21,6 +22,10 @@ class HealthTests(unittest.TestCase):
         cls.server.shutdown()
         cls.server.server_close()
         cls.thread.join()
+
+    def test_duplicate_port_is_rejected(self):
+        with self.assertRaises(OSError):
+            APIHTTPServer(("127.0.0.1", self.server.server_port), Handler)
 
     def test_root_and_health(self):
         for path in ("/", "/health", "/health?probe=1"):

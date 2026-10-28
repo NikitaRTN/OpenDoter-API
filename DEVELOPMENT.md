@@ -15,3 +15,5 @@ Regression tests (standard library only, no external API requests):
 ```bash
 python -m unittest discover -s tests -v
 ```
+
+On Windows the API uses an exclusive listening socket. A second API instance fails with a clear startup error instead of silently sharing the port with an older instance. Restart the previous OpenDoter API process before running the updated version.
