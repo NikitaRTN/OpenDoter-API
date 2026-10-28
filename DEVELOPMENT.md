@@ -29,3 +29,14 @@ python -m pip install -r requirements.txt
 Valve replay URLs may end with `.dem.bz2` even when their contents use Zstandard. The API detects BZip2, Zstandard and uncompressed demos from their signatures, not filenames. Decoding is incremental and the `.dem` is replaced atomically only after successful decompression and demo-header validation. Cached archives are reused; a format mismatch does not require downloading the replay again.
 
 A truncated archive, unknown response format or decoded non-demo produces a specific error and never replaces a previously valid `.dem`. Original archives remain available for diagnostics. Restart the API after updating its code or dependencies.
+## Teamfight participation
+
+`processors/teamfightParticipation.mjs` adds `participated`, `damage_taken` and `combat_healing` to each teamfight player. Participation requires a hero kill/death, damage dealt/received against an enemy hero, a targeted enemy ability, or healing another engaged ally. Passive gold/XP, buybacks, generic casts and self-healing alone are not evidence. Healing-only groups cannot seed participation.
+
+The PHP frontend hides players with `participated: false` before computing displayed team totals. Existing matches must be reprocessed to populate the new fields; older blobs use a conservative kills/deaths/damage fallback. Fight boundaries remain the existing death-cluster heuristic and can span separate locations.
+
+Run the focused processor regression tests with Node.js:
+
+```bash
+node --test tests/teamfightParticipation.test.mjs
+```

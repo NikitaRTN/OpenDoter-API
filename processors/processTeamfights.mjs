@@ -1,4 +1,5 @@
 import populate from './populate.mjs';
+import annotateTeamfightParticipation from './teamfightParticipation.mjs';
 /**
  * A processor to compute teamfights that occurred given an event stream
  * */
@@ -90,9 +91,9 @@ function processTeamfights(entries, meta) {
             r.key = JSON.stringify([Math.round(x), Math.round(y)]);
             r.posData = true;
             populate(r, tf);
-            // increment death count for this hero
-            tf.players[r.slot].deaths += 1;
           }
+          // Deaths remain evidence even if no positional sample was recorded.
+          if (tf.players[r.slot]) tf.players[r.slot].deaths += 1;
         } else if (e.type === 'buyback_log') {
           // bought back
           if (tf.players[e.slot]) {
@@ -138,6 +139,7 @@ function processTeamfights(entries, meta) {
       }
     }
   }
+  for (const tf of teamfights) annotateTeamfightParticipation(tf, entries, meta);
   return teamfights;
 }
 export default processTeamfights;
