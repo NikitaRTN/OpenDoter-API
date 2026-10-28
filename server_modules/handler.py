@@ -18,6 +18,7 @@ from .players import (
     search_players_local,
 )
 from .utils import read_json
+from .profile_insights import get_player_insights
 
 # Константы (heroes/items/abilities/ability_ids) меняются крайне редко, но
 # запрашиваются на КАЖДОЙ загрузке страницы матча. Раньше файл читался с диска
@@ -159,6 +160,14 @@ class Handler(BaseHTTPRequestHandler):
                 account_id, tail = sub.split("/", 1)
                 if not account_id.isdigit():
                     self._send_error_json("account_id must be numeric", 400, "Bad request")
+                    return
+                if tail == "insights":
+                    try:
+                        self.send_json(get_player_insights(account_id, urllib.parse.parse_qs(parsed.query)))
+                    except ValueError as exc:
+                        self._send_error_json(str(exc), 400, "Bad filter")
+                    except Exception as exc:
+                        self._send_error_json(str(exc), 502, "OpenDota history error")
                     return
                 if tail.startswith("page"):
                     qs = urllib.parse.parse_qs(parsed.query)
