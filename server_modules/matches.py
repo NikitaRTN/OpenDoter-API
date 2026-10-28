@@ -1,4 +1,7 @@
 import json
+import os
+import tempfile
+from pathlib import Path
 import subprocess
 import threading
 import time
@@ -134,7 +137,41 @@ def build_blob(match_id, jsonl_path, blob_path):
         raise RuntimeError(result.stderr.decode("utf-8", "replace"))
 
 
-def parse_match(match_id):
+def refresh_teamfight_details(match_id, folder, blob_path):
+    """Rebuild fights from saved replay events without risking the cached blob."""
+    jsonl_path = folder / "parsed.jsonl"
+    if not jsonl_path.is_file():
+        raise RuntimeError("Сохранённый журнал реплея недоступен; обновить хронологию автоматически не удалось.")
+    old = read_json(blob_path)
+    if not isinstance(old, dict) or not isinstance(old.get("teamfights"), list):
+        raise RuntimeError("В сохранённом разборе нет списка командных боёв.")
+    temporary = []
+    try:
+        with tempfile.NamedTemporaryFile(dir=folder, prefix="teamfights-build-", suffix=".tmp", delete=False) as f:
+            build_path = Path(f.name)
+        temporary.append(build_path)
+        build_blob(match_id, jsonl_path, build_path)
+        rebuilt = read_json(build_path)
+        fights = rebuilt.get("teamfights") if isinstance(rebuilt, dict) else None
+        if (not isinstance(fights, list) or (old["teamfights"] and not fights)
+                or any(not isinstance(f, dict) or f.get("actions_version") != 1
+                       or not isinstance(f.get("actions"), list) for f in fights)):
+            raise RuntimeError("Не удалось восстановить командные бои из журнала.")
+        old["teamfights"] = fights
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=folder,
+                                         prefix="teamfights-commit-", suffix=".tmp", delete=False) as f:
+            commit_path = Path(f.name)
+            temporary.append(commit_path)
+            json.dump(old, f, ensure_ascii=False, separators=(",", ":"))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(commit_path, blob_path)
+    finally:
+        for path in temporary:
+            path.unlink(missing_ok=True)
+
+
+def parse_match(match_id, refresh_teamfights=False):
     match_id = str(match_id).strip()
     if not match_id.isdigit():
         raise ValueError("match_id must be numeric")
@@ -144,7 +181,10 @@ def parse_match(match_id):
         folder.mkdir(parents=True, exist_ok=True)
         blob_path = folder / "parsed_blob.json"
         if blob_path.exists() and (folder / "match.json").exists():
-            parse_status[match_id] = {"state": "done", "message": "Loaded from cache"}
+            if refresh_teamfights:
+                parse_status[match_id] = {"state": "running", "message": "Обновление хронологии боёв"}
+                refresh_teamfight_details(match_id, folder, blob_path)
+            parse_status[match_id] = {"state": "done", "message": "Done" if refresh_teamfights else "Loaded from cache"}
             _refresh_players_index_after_parse(match_id)
             return
         parse_status[match_id] = {"state": "running", "message": "Preparing constants"}
@@ -220,13 +260,13 @@ def get_match_metadata(match_id):
         raise
 
 
-def start_parse_thread(match_id):
-    if parse_status.get(match_id, {}).get("state") == "running":
+def start_parse_thread(match_id, refresh_teamfights=False):
+    if parse_status.get(match_id, {}).get("state") in ("queued", "running"):
         return
     parse_status[match_id] = {"state": "queued", "message": "Queued"}
     def worker():
         try:
-            parse_match(match_id)
+            parse_match(match_id, refresh_teamfights=refresh_teamfights)
         except Exception as exc:
             parse_status[match_id] = {"state": "error", "message": str(exc)}
             log(f"parse error {match_id}: {exc}")

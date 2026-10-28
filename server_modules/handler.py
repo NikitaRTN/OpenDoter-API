@@ -280,7 +280,7 @@ class Handler(BaseHTTPRequestHandler):
             if not match_id.isdigit():
                 self.send_json({"error": "match_id must be numeric"}, 400)
                 return
-            start_parse_thread(match_id)
+            start_parse_thread(match_id, refresh_teamfights=payload.get("refresh_teamfights") is True)
             self.send_json({"match_id": match_id, "state": parse_status[match_id]["state"]})
             return
         self.send_json({"error": "Not found"}, 404)

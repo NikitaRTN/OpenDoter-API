@@ -1,4 +1,5 @@
 import populate from './populate.mjs';
+import addTeamfightDetails from './teamfightDetails.mjs';
 import annotateTeamfightParticipation from './teamfightParticipation.mjs';
 /**
  * A processor to compute teamfights that occurred given an event stream
@@ -139,7 +140,10 @@ function processTeamfights(entries, meta) {
       }
     }
   }
-  for (const tf of teamfights) annotateTeamfightParticipation(tf, entries, meta);
+  for (const tf of teamfights) {
+    annotateTeamfightParticipation(tf, entries, meta);
+    addTeamfightDetails(tf, entries, meta);
+  }
   return teamfights;
 }
 export default processTeamfights;

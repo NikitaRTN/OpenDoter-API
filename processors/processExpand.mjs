@@ -212,6 +212,9 @@ function processExpand(entries, meta) {
         unit: e.attackername,
         key: translate(e.inflictor),
         type: 'ability_uses',
+        targetname: e.targetname,
+        targetillusion: e.targetillusion,
+        attackerillusion: e.attackerillusion,
       });
       // target of ability
       if (e.targethero && !e.targetillusion) {
@@ -240,6 +243,9 @@ function processExpand(entries, meta) {
         unit: e.attackername,
         key: translate(e.inflictor),
         type: 'item_uses',
+        targetname: e.targetname,
+        targetillusion: e.targetillusion,
+        attackerillusion: e.attackerillusion,
       });
     },
     DOTA_COMBATLOG_LOCATION() {
