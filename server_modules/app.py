@@ -10,5 +10,5 @@ def main():
     ensure_constants()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", WEB_PORT), Handler)
-    log(f"Open http://localhost:{WEB_PORT}/")
+    log(f"OpenDoter API: http://localhost:{WEB_PORT}/ (health: /health). The PHP site is a separate server.")
     server.serve_forever()

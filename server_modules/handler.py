@@ -106,6 +106,15 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
 
+        if path in ("/", "/health"):
+            self.send_json({
+                "service": "OpenDoter API",
+                "status": "ok",
+                "health": "/health",
+                "message": "This is the API, not the PHP site. Start run-all.bat in the OpenDoter site repository and use the site URL printed there.",
+            })
+            return
+
         if path.startswith("/api/status/"):
             match_id = path.rsplit("/", 1)[-1]
             self.send_json(parse_status.get(match_id, {"state": "idle", "message": "Not started"}))
